@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Programador de Encuentros Sincrónicos</title>
+  <style>
+    :root {
+      --primary-orange: rgb(255, 154, 0);
+      --primary-purple: rgb(128, 52, 174);
+      --purple-light: rgba(128, 52, 174, 0.1);
+      --bg-gray: #f8f9fa;
+      --border-color: #e2e8f0;
+      --text-dark: #2d3748;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-gray);
+      color: var(--text-dark);
+      padding: 20px;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary-purple), var(--primary-orange));
+      color: white;
+      padding: 25px 20px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      margin-bottom: 5px;
+    }
+
+    header p {
+      font-size: 1.05rem;
+      opacity: 0.95;
+      font-weight: 300;
+    }
+
+    .status-bar {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 5px 12px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 25px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      height: fit-content;
+    }
+
+    .panel h2 {
+      font-size: 1.2rem;
+      color: var(--primary-purple);
+      margin-bottom: 18px;
+      border-bottom: 2px solid var(--purple-light);
+      padding-bottom: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.88rem;
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary-purple);
+      box-shadow: 0 0 0 2px var(--purple-light);
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .checkbox-group input {
+      width: auto;
+    }
+
+    button.btn-submit {
+      width: 100%;
+      background-color: var(--primary-orange);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+      margin-top: 10px;
+    }
+
+    button.btn-submit:hover {
+      background-color: #e08800;
+    }
+
+    .alert-box {
+      background-color: #fff5f5;
+      border-left: 4px solid #e53e3e;
+      color: #c53030;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .grid-container {
+      overflow-x: auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      padding: 15px;
+    }
+
+    /* Controles de Navegación del Calendario */
+    .calendar-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding: 0 5px;
+    }
+
+    .calendar-controls .nav-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .calendar-controls button {
+      background-color: var(--primary-purple);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+
+    .calendar-controls button:hover {
+      opacity: 0.9;
+    }
+
+    .current-week-label {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: var(--primary-purple);
+    }
+
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: 80px repeat(7, 1fr);
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    .grid-header, .grid-cell {
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
+    .grid-header {
+      background-color: var(--primary-purple);
+      color: white;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .grid-header .date-sub {
+      font-size: 0.75rem;
+      font-weight: normal;
+      opacity: 0.9;
+      display: block;
+    }
+
+    .time-col {
+      background-color: #f7fafc;
+      font-weight: 600;
+      color: #718096;
+    }
+
+    .grid-cell {
+      min-height: 55px;
+      position: relative;
+      background-color: #fff;
+    }
+
+    .event-card {
+      background-color: var(--purple-light);
+      border-left: 3px solid var(--primary-purple);
+      color: var(--primary-purple);
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      text-align: left;
+      margin-bottom: 4px;
+      position: relative;
+    }
+
+    .event-card strong {
+      display: block;
+      color: #1a202c;
+    }
+
+    .event-card .sem-badge {
+      display: inline-block;
+      background: var(--primary-orange);
+      color: white;
+      font-size: 0.65rem;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-top: 2px;
+    }
+
+    .event-card .btn-delete {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      color: #e53e3e;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Programador de Encuentros Sincrónicos</h1>
+    <p>Ingeniería Industrial virtual.</p>
+    <div class="status-bar" id="syncStatus">Sincronizando con Google Sheets...</div>
+  </header>
+
+  <div class="container">
+    <div class="panel">
+      <h2>Programar Clase</h2>
+      
+      <div id="alertBox" class="alert-box"></div>
+
+      <form id="scheduleForm">
+        <div class="form-group">
+          <label for="profesor">Nombre del Profesor:</label>
+          <input type="text" id="profesor" placeholder="Ej. Dr. Carlos Pérez" required>
+        </div>
+
+        <div class="form-group">
+          <label for="curso">Curso:</label>
+          <select id="curso" required>
+            <option value="">Seleccione un curso...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="fecha">Fecha de inicio:</label>
+          <input type="date" id="fecha" required>
+        </div>
+
+        <div class="form-group">
+          <label for="hora">Franja Horaria (1 hora):</label>
+          <select id="hora" required>
+            <option value="">Seleccione una hora...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Repetición:</label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="multisemana">
+            <label for="multisemana" style="font-weight:normal; margin:0;">Programar múltiples semanas</label>
+          </div>
+        </div>
+
+        <div class="form-group" id="numSemanasGroup" style="display:none;">
+          <label for="semanas">Número de semanas consecutivas:</label>
+          <input type="number" id="semanas" min="2" max="16" value="4">
+        </div>
+
+        <button type="submit" class="btn-submit">Guardar Encuentro</button>
+      </form>
+    </div>
+
+    <div class="grid-container">
+      <div class="calendar-controls">
+        <div class="nav-btns">
+          <button id="btnPrevWeek">&lt; Anterior</button>
+          <button id="btnToday">Hoy</button>
+          <button id="btnNextWeek">Siguiente &gt;</button>
+        </div>
+        <div class="current-week-label" id="currentWeekLabel">Semana de...</div>
+      </div>
+      <div class="schedule-grid" id="scheduleGrid"></div>
+    </div>
+  </div>
+
+  <script>
+    // URL DE CONEXIÓN A GOOGLE SHEETS
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyKM-p0bQNGNQsBHPjcJZLBwMbAbj5ALMOF9owHN-p3k6sUyj5-evAaGGpzJX6fNRxYVg/exec";
+
+    const cursosData = [
+      { nombre: "Ideando la Ingeniería", semestre: 1 },
+      { nombre: "Álgebra lineal", semestre: 1 },
+      { nombre: "Cálculo diferencial", semestre: 1 },
+      { nombre: "Introducción a la ingeniería industrial", semestre: 1 },
+      { nombre: "Expresión", semestre: 2 },
+      { nombre: "Mecánica y laboratorio", semestre: 2 },
+      { nombre: "Cálculo integral", semestre: 2 },
+      { nombre: "Fundamentos de programación", semestre: 2 },
+      { nombre: "Entorno económico", semestre: 2 },
+      { nombre: "Creatividad", semestre: 3 },
+      { nombre: "Dinámica de la ingeniería", semestre: 3 },
+      { nombre: "Electromagnetismo y laboratorio", semestre: 3 },
+      { nombre: "Cálculo en varias variables", semestre: 3 },
+      { nombre: "Estadística descriptiva", semestre: 3 },
+      { nombre: "Programación de computadores", semestre: 3 },
+      { nombre: "Ecuaciones diferenciales", semestre: 4 },
+      { nombre: "Estadística inferencial y muestreo", semestre: 4 },
+      { nombre: "Cadenas de suministro", semestre: 4 },
+      { nombre: "Materiales y procesos de manufactura", semestre: 4 },
+      { nombre: "Ingeniería y Finanzas", semestre: 4 },
+      { nombre: "Ingeniería del entorno", semestre: 5 },
+      { nombre: "Ciencia de datos e inteligencia artificial", semestre: 5 },
+      { nombre: "Optimización", semestre: 5 },
+      { nombre: "Planeación de recursos empresariales", semestre: 5 },
+      { nombre: "Análisis de procesos", semestre: 5 },
+      { nombre: "Ingeniería de proyectos", semestre: 5 },
+      { nombre: "Gestión integral de la calidad", semestre: 5 },
+      { nombre: "Toma de decisiones bajo incertidumbre", semestre: 6 },
+      { nombre: "Propuesta de investigación en Ingeniería", semestre: 6 },
+      { nombre: "Logistics", semestre: 6 },
+      { nombre: "Seguridad y salud en el trabajo", semestre: 6 },
+      { nombre: "Lean Processes", semestre: 6 },
+      { nombre: "Simulación de procesos", semestre: 7 },
+      { nombre: "Soluciones innovadoras", semestre: 7 },
+      { nombre: "Facilities planning", semestre: 7 },
+      { nombre: "Diseño de proyectos", semestre: 7 }
+    ];
+
+    let scheduleData = [];
+    let currentMonday = getMonday(new Date());
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initCursoOptions();
+      initHoraOptions();
+      setupNavigation();
+      renderGrid();
+      loadEventsFromSheets();
+
+      document.getElementById('multisemana').addEventListener('change', (e) => {
+        document.getElementById('numSemanasGroup').style.display = e.target.checked ? 'block' : 'none';
+      });
+
+      document.getElementById('scheduleForm').addEventListener('submit', handleFormSubmit);
+    });
+
+    function getMonday(d) {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(date.setDate(diff));
+    }
+
+    function formatDateToYYYYMMDD(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function setupNavigation() {
+      document.getElementById('btnPrevWeek').addEventListener('click', () => {
+        currentMonday.setDate(currentMonday.getDate() - 7);
+        renderGrid();
+        updateGridWithEvents();
+      });
+
+      document.getElementById('btnNextWeek').addEventListener('click', () => {
+        currentMonday.setDate(currentMonday.getDate() + 7);
+        renderGrid();
+        updateGridWithEvents();
+      });
+
+      document.getElementById('btnToday').addEventListener('click', () => {
+        currentMonday = getMonday(new Date());
+        renderGrid();
+        updateGridWithEvents();
+      });
+    }
+
+    function initCursoOptions() {
+      const select = document.getElementById('curso');
+      cursosData.sort((a,b) => a.semestre - b.semestre).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.nombre;
+        opt.textContent = `[Sem ${c.semestre}] ${c.nombre}`;
+        select.appendChild(opt);
+      });
+    }
+
+    function initHoraOptions() {
+      const select = document.getElementById('hora');
+      for (let h = 6; h <= 20; h++) {
+        const start = h < 10 ? `0${h}:00` : `${h}:00`;
+        const end = (h+1) < 10 ? `0${h+1}:00` : `${h+1}:00`;
+        const opt = document.createElement('option');
+        opt.value = `${start} - ${end}`;
+        opt.textContent = `${start} - ${end}`;
+        select.appendChild(opt);
+      }
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('scheduleGrid');
+      grid.innerHTML = '';
+      
+      const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+      const weekDates = [];
+
+      for (let i = 0; i < 7; i++) {
+        const tempDate = new Date(currentMonday);
+        tempDate.setDate(currentMonday.getDate() + i);
+        weekDates.push(tempDate);
+      }
+
+      // Actualizar etiqueta del rango de la semana
+      const endSunday = weekDates[6];
+      document.getElementById('currentWeekLabel').textContent = 
+        `Semana: ${currentMonday.getDate()}/${currentMonday.getMonth()+1}/${currentMonday.getFullYear()} - ${endSunday.getDate()}/${endSunday.getMonth()+1}/${endSunday.getFullYear()}`;
+
+      // Encabezados
+      const timeHeader = document.createElement('div');
+      timeHeader.className = 'grid-header';
+      timeHeader.textContent = 'Hora';
+      grid.appendChild(timeHeader);
+
+      dayNames.forEach((d, idx) => {
+        const header = document.createElement('div');
+        header.className = 'grid-header';
+        const dateObj = weekDates[idx];
+        const dateStr = `${dateObj.getDate()}/${dateObj.getMonth()+1}`;
+        header.innerHTML = `${d}<span class="date-sub">${dateStr}</span>`;
+        grid.appendChild(header);
+      });
+
+      // Filas por cada hora
+      for (let h = 6; h <= 20; h++) {
+        const timeCell = document.createElement('div');
+        timeCell.className = 'grid-cell time-col';
+        const start = h < 10 ? `0${h}:00` : `${h}:00`;
+        timeCell.textContent = start;
+        grid.appendChild(timeCell);
+
+        for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+          const cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          const hourStr = `${start} - ${h+1 < 10 ? '0'+(h+1) : h+1}:00`;
+          const dateStr = formatDateToYYYYMMDD(weekDates[dayIdx]);
+          
+          cell.dataset.time = hourStr;
+          cell.dataset.date = dateStr;
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    async function loadEventsFromSheets() {
+      const status = document.getElementById('syncStatus');
+      status.textContent = '🔄 Cargando de Google Sheets...';
+      try {
+        const res = await fetch(SCRIPT_URL);
+        scheduleData = await res.json();
+        status.textContent = '✅ Sincronizado con Google Sheets';
+        updateGridWithEvents();
+      } catch (err) {
+        status.textContent = '⚠️ Error conectando con Google Sheets';
+      }
+    }
+
+    function updateGridWithEvents() {
+      document.querySelectorAll('.grid-cell:not(.time-col)').forEach(c => c.innerHTML = '');
+
+      scheduleData.forEach(ev => {
+        // Formatear la fecha entrante a YYYY-MM-DD estándar
+        let evDateStr = ev.fecha;
+        if (evDateStr.includes('T')) {
+          evDateStr = evDateStr.split('T')[0];
+        }
+
+        const matchingCell = document.querySelector(`.grid-cell[data-date="${evDateStr}"][data-time="${ev.hora}"]`);
+        
+        if (matchingCell) {
+          const card = document.createElement('div');
+          card.className = 'event-card';
+          card.innerHTML = `
+            <span class="btn-delete" onclick="deleteEvent('${ev.id}')">&times;</span>
+            <strong>${ev.curso}</strong>
+            <div>Prof: ${ev.profesor}</div>
+            <span class="sem-badge">Semestre ${ev.semestre}</span>
+          `;
+          matchingCell.appendChild(card);
+        }
+      });
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      hideAlert();
+
+      const profesor = document.getElementById('profesor').value.trim();
+      const cursoNombre = document.getElementById('curso').value;
+      const fecha = document.getElementById('fecha').value;
+      const hora = document.getElementById('hora').value;
+      const multisemana = document.getElementById('multisemana').checked;
+      const numSemanas = multisemana ? parseInt(document.getElementById('semanas').value) : 1;
+
+      const cursoObj = cursosData.find(c => c.nombre === cursoNombre);
+      const sem = cursoObj.semestre;
+
+      let newEvents = [];
+      let baseDate = new Date(fecha + 'T00:00:00');
+
+      for (let i = 0; i < numSemanas; i++) {
+        let currentDate = new Date(baseDate);
+        currentDate.setDate(baseDate.getDate() + (i * 7));
+        let dateStr = formatDateToYYYYMMDD(currentDate);
+
+        const conflict = scheduleData.find(ev => {
+          let evDate = ev.fecha.includes('T') ? ev.fecha.split('T')[0] : ev.fecha;
+          return ev.semestre === sem && evDate === dateStr && ev.hora === hora;
+        });
+
+        if (conflict) {
+          showAlert(`Cruce horaria: El curso "${conflict.curso}" de Semestre ${sem} ya está programado el ${dateStr} a las ${hora}.`);
+          return;
+        }
+
+        newEvents.push({
+          id: Date.now().toString() + "_" + i,
+          profesor: profesor,
+          curso: cursoNombre,
+          semestre: sem,
+          fecha: dateStr,
+          hora: hora
+        });
+      }
+
+      document.getElementById('syncStatus').textContent = '⏳ Guardando en Google Sheets...';
+      
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'add', events: newEvents })
+        });
+        
+        scheduleData.push(...newEvents);
+        updateGridWithEvents();
+        document.getElementById('scheduleForm').reset();
+        document.getElementById('numSemanasGroup').style.display = 'none';
+        document.getElementById('syncStatus').textContent = '✅ Guardado exitoso';
+      } catch (err) {
+        showAlert("Error guardando datos en Google Sheets.");
+      }
+    }
+
+    async function deleteEvent(id) {
+      if (!confirm("¿Deseas eliminar este encuentro?")) return;
+      
+      document.getElementById('syncStatus').textContent = '⏳ Eliminando de Google Sheets...';
+      scheduleData = scheduleData.filter(ev => ev.id !== id);
+      updateGridWithEvents();
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id: id })
+        });
+        document.getElementById('syncStatus').textContent = '✅ Eliminado correctamente';
+      } catch (err) {
+        showAlert("Error eliminando en Google Sheets.");
+      }
+    }
+
+    function showAlert(msg) {
+      const box = document.getElementById('alertBox');
+      box.textContent = msg;
+      box.style.display = 'block';
+    }
+
+    function hideAlert() {
+      document.getElementById('alertBox').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
