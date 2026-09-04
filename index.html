@@ -134,6 +134,14 @@
       background-color: #e08800;
     }
 
+    button.btn-warning {
+      background-color: #e53e3e !important;
+    }
+
+    button.btn-warning:hover {
+      background-color: #c53030 !important;
+    }
+
     .alert-box {
       background-color: #fff5f5;
       border-left: 4px solid #e53e3e;
@@ -143,6 +151,13 @@
       font-size: 0.85rem;
       margin-bottom: 15px;
       display: none;
+      line-height: 1.4;
+    }
+
+    .alert-box.warning-mode {
+      background-color: #fffaf0;
+      border-left-color: #dd6b20;
+      color: #9c4221;
     }
 
     .grid-container {
@@ -153,7 +168,6 @@
       padding: 15px;
     }
 
-    /* Controles de Navegación del Calendario */
     .calendar-controls {
       display: flex;
       justify-content: space-between;
@@ -240,6 +254,12 @@
       position: relative;
     }
 
+    .event-card.electiva-card {
+      border-left-color: var(--primary-orange);
+      background-color: rgba(255, 154, 0, 0.1);
+      color: #b76e00;
+    }
+
     .event-card strong {
       display: block;
       color: #1a202c;
@@ -287,10 +307,22 @@
         </div>
 
         <div class="form-group">
-          <label for="curso">Curso:</label>
-          <select id="curso" required>
+          <div class="checkbox-group">
+            <input type="checkbox" id="esElectiva">
+            <label for="esElectiva" style="font-weight:600; margin:0;">¿Es Minor o Electiva?</label>
+          </div>
+        </div>
+
+        <div class="form-group" id="groupCursoLista">
+          <label for="curso">Curso del Plan:</label>
+          <select id="curso">
             <option value="">Seleccione un curso...</option>
           </select>
+        </div>
+
+        <div class="form-group" id="groupCursoTexto" style="display:none;">
+          <label for="cursoElectivo">Nombre de Minor / Electiva:</label>
+          <input type="text" id="cursoElectivo" placeholder="Ej. Inteligencia de Negocios (Electiva)">
         </div>
 
         <div class="form-group">
@@ -318,7 +350,7 @@
           <input type="number" id="semanas" min="2" max="16" value="4">
         </div>
 
-        <button type="submit" class="btn-submit">Guardar Encuentro</button>
+        <button type="submit" id="submitBtn" class="btn-submit">Guardar Encuentro</button>
       </form>
     </div>
 
@@ -336,7 +368,7 @@
   </div>
 
   <script>
-    // URL DE CONEXIÓN A GOOGLE SHEETS
+    // REEMPLAZA ESTA URL POR LA TUYA DE GOOGLE APPS SCRIPT
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyKM-p0bQNGNQsBHPjcJZLBwMbAbj5ALMOF9owHN-p3k6sUyj5-evAaGGpzJX6fNRxYVg/exec";
 
     const cursosData = [
@@ -380,6 +412,7 @@
 
     let scheduleData = [];
     let currentMonday = getMonday(new Date());
+    let pendingEvents = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       initCursoOptions();
@@ -388,8 +421,26 @@
       renderGrid();
       loadEventsFromSheets();
 
+      document.getElementById('esElectiva').addEventListener('change', (e) => {
+        resetSubmitBtn();
+        const isElectiva = e.target.checked;
+        document.getElementById('groupCursoLista').style.display = isElectiva ? 'none' : 'block';
+        document.getElementById('groupCursoTexto').style.display = isElectiva ? 'block' : 'none';
+        if (isElectiva) {
+          document.getElementById('curso').value = '';
+        } else {
+          document.getElementById('cursoElectivo').value = '';
+        }
+      });
+
       document.getElementById('multisemana').addEventListener('change', (e) => {
+        resetSubmitBtn();
         document.getElementById('numSemanasGroup').style.display = e.target.checked ? 'block' : 'none';
+      });
+
+      ['profesor', 'curso', 'cursoElectivo', 'fecha', 'hora', 'semanas'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', resetSubmitBtn);
       });
 
       document.getElementById('scheduleForm').addEventListener('submit', handleFormSubmit);
@@ -431,6 +482,7 @@
 
     function initCursoOptions() {
       const select = document.getElementById('curso');
+      select.innerHTML = '<option value="">Seleccione un curso...</option>';
       cursosData.sort((a,b) => a.semestre - b.semestre).forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.nombre;
@@ -464,12 +516,10 @@
         weekDates.push(tempDate);
       }
 
-      // Actualizar etiqueta del rango de la semana
       const endSunday = weekDates[6];
       document.getElementById('currentWeekLabel').textContent = 
         `Semana: ${currentMonday.getDate()}/${currentMonday.getMonth()+1}/${currentMonday.getFullYear()} - ${endSunday.getDate()}/${endSunday.getMonth()+1}/${endSunday.getFullYear()}`;
 
-      // Encabezados
       const timeHeader = document.createElement('div');
       timeHeader.className = 'grid-header';
       timeHeader.textContent = 'Hora';
@@ -484,7 +534,6 @@
         grid.appendChild(header);
       });
 
-      // Filas por cada hora
       for (let h = 6; h <= 20; h++) {
         const timeCell = document.createElement('div');
         timeCell.className = 'grid-cell time-col';
@@ -522,7 +571,6 @@
       document.querySelectorAll('.grid-cell:not(.time-col)').forEach(c => c.innerHTML = '');
 
       scheduleData.forEach(ev => {
-        // Formatear la fecha entrante a YYYY-MM-DD estándar
         let evDateStr = ev.fecha;
         if (evDateStr.includes('T')) {
           evDateStr = evDateStr.split('T')[0];
@@ -532,33 +580,68 @@
         
         if (matchingCell) {
           const card = document.createElement('div');
-          card.className = 'event-card';
+          const isElectiva = (ev.semestre === "Electiva" || ev.semestre === 0);
+          card.className = `event-card ${isElectiva ? 'electiva-card' : ''}`;
+          
+          const semLabel = isElectiva ? "Minor / Electiva" : `Semestre ${ev.semestre}`;
           card.innerHTML = `
             <span class="btn-delete" onclick="deleteEvent('${ev.id}')">&times;</span>
             <strong>${ev.curso}</strong>
             <div>Prof: ${ev.profesor}</div>
-            <span class="sem-badge">Semestre ${ev.semestre}</span>
+            <span class="sem-badge">${semLabel}</span>
           `;
           matchingCell.appendChild(card);
         }
       });
     }
 
+    function resetSubmitBtn() {
+      pendingEvents = null;
+      hideAlert();
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = "Guardar Encuentro";
+      btn.classList.remove('btn-warning');
+    }
+
     async function handleFormSubmit(e) {
       e.preventDefault();
+
+      if (pendingEvents) {
+        await executeSave(pendingEvents);
+        return;
+      }
+
       hideAlert();
 
       const profesor = document.getElementById('profesor').value.trim();
-      const cursoNombre = document.getElementById('curso').value;
+      const isElectiva = document.getElementById('esElectiva').checked;
+      let cursoNombre = "";
+      let sem = "Electiva";
+
+      if (isElectiva) {
+        cursoNombre = document.getElementById('cursoElectivo').value.trim();
+        if (!cursoNombre) {
+          showAlert("Por favor escribe el nombre de la Electiva o Minor.", false);
+          return;
+        }
+      } else {
+        cursoNombre = document.getElementById('curso').value;
+        if (!cursoNombre) {
+          showAlert("Por favor selecciona un curso del plan de estudios.", false);
+          return;
+        }
+        const cursoObj = cursosData.find(c => c.nombre === cursoNombre);
+        sem = cursoObj.semestre;
+      }
+
       const fecha = document.getElementById('fecha').value;
       const hora = document.getElementById('hora').value;
       const multisemana = document.getElementById('multisemana').checked;
       const numSemanas = multisemana ? parseInt(document.getElementById('semanas').value) : 1;
 
-      const cursoObj = cursosData.find(c => c.nombre === cursoNombre);
-      const sem = cursoObj.semestre;
-
       let newEvents = [];
+      let blockingConflict = null;
+      let warningConflict = null;
       let baseDate = new Date(fecha + 'T00:00:00');
 
       for (let i = 0; i < numSemanas; i++) {
@@ -566,14 +649,30 @@
         currentDate.setDate(baseDate.getDate() + (i * 7));
         let dateStr = formatDateToYYYYMMDD(currentDate);
 
+        // Buscar si ya hay algo agendado en esa fecha y hora
         const conflict = scheduleData.find(ev => {
           let evDate = ev.fecha.includes('T') ? ev.fecha.split('T')[0] : ev.fecha;
-          return ev.semestre === sem && evDate === dateStr && ev.hora === hora;
+          return evDate === dateStr && ev.hora === hora;
         });
 
         if (conflict) {
-          showAlert(`Cruce horaria: El curso "${conflict.curso}" de Semestre ${sem} ya está programado el ${dateStr} a las ${hora}.`);
-          return;
+          // Es un cruce de MISMO SEMESTRE (ninguno es electiva y tienen el mismo semestre)
+          if (sem !== "Electiva" && conflict.semestre == sem) {
+            blockingConflict = {
+              fecha: dateStr,
+              existente: conflict.curso,
+              profesor: conflict.profesor,
+              semestre: sem
+            };
+            break; // Detener revisión
+          } else {
+            // Es un cruce donde interviene una Electiva/Minor
+            warningConflict = {
+              fecha: dateStr,
+              existente: conflict.curso,
+              profesor: conflict.profesor
+            };
+          }
         }
 
         newEvents.push({
@@ -586,6 +685,31 @@
         });
       }
 
+      // 1. EVALUAR CRUCE BLOQUEANTE (Mismo semestre)
+      if (blockingConflict) {
+        let msg = `⛔ <strong>Cruce no permitido:</strong> El curso "${blockingConflict.existente}" (${blockingConflict.profesor}) del <strong>Semestre ${blockingConflict.semestre}</strong> ya está programado el ${blockingConflict.fecha} a las ${hora}. Debes cambiar el horario.`;
+        showAlert(msg, false); // No es editable/advertencia
+        return;
+      }
+
+      // 2. EVALUAR ADVERTENCIA NO BLOQUEANTE (Involucra electiva/minor)
+      if (warningConflict) {
+        let msg = `⚠️ <strong>Advertencia de Cruce con Electiva:</strong> La franja ${hora} ya tiene agendada la materia "${warningConflict.existente}" (${warningConflict.profesor}) el ${warningConflict.fecha}.<br><br>Si deseas programarla en este horario de todos modos, haz clic en el botón para confirmar.`;
+        
+        showAlert(msg, true);
+        pendingEvents = newEvents;
+        
+        const btn = document.getElementById('submitBtn');
+        btn.textContent = "⚠️ Confirmar y Guardar de todos modos";
+        btn.classList.add('btn-warning');
+        return;
+      }
+
+      // 3. SI NO HAY CRUCES, GUARDAR DE INMEDIATO
+      await executeSave(newEvents);
+    }
+
+    async function executeSave(eventsToSave) {
       document.getElementById('syncStatus').textContent = '⏳ Guardando en Google Sheets...';
       
       try {
@@ -593,16 +717,19 @@
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'add', events: newEvents })
+          body: JSON.stringify({ action: 'add', events: eventsToSave })
         });
         
-        scheduleData.push(...newEvents);
+        scheduleData.push(...eventsToSave);
         updateGridWithEvents();
         document.getElementById('scheduleForm').reset();
         document.getElementById('numSemanasGroup').style.display = 'none';
+        document.getElementById('groupCursoLista').style.display = 'block';
+        document.getElementById('groupCursoTexto').style.display = 'none';
+        resetSubmitBtn();
         document.getElementById('syncStatus').textContent = '✅ Guardado exitoso';
       } catch (err) {
-        showAlert("Error guardando datos en Google Sheets.");
+        showAlert("Error guardando datos en Google Sheets.", false);
       }
     }
 
@@ -622,18 +749,25 @@
         });
         document.getElementById('syncStatus').textContent = '✅ Eliminado correctamente';
       } catch (err) {
-        showAlert("Error eliminando en Google Sheets.");
+        showAlert("Error eliminando en Google Sheets.", false);
       }
     }
 
-    function showAlert(msg) {
+    function showAlert(msg, isWarning = false) {
       const box = document.getElementById('alertBox');
-      box.textContent = msg;
+      box.innerHTML = msg;
       box.style.display = 'block';
+      if(isWarning) {
+        box.classList.add('warning-mode');
+      } else {
+        box.classList.remove('warning-mode');
+      }
     }
 
     function hideAlert() {
-      document.getElementById('alertBox').style.display = 'none';
+      const box = document.getElementById('alertBox');
+      box.style.display = 'none';
+      box.classList.remove('warning-mode');
     }
   </script>
 </body>
